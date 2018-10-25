@@ -6,12 +6,15 @@
 #include <string.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <stdio.h>
 
 #include "wsprsim_utils.h"
 #include "wsprd_utils.h"
 #include "nhash.h"
 #include "fano.h"
 
+// declare verbose_mode global
+extern unsigned char verbose_mode;
 
 char get_locator_character_code(char ch) {
     if( ch >=48 && ch <=57 ) { //0-9
@@ -297,10 +300,13 @@ int get_wspr_channel_symbols(char* rawmessage, char* hashtab, unsigned char* sym
     signed char check_data[11];
     memcpy(check_data,data,sizeof(char)*11);
     unpk_(check_data,hashtab,check_call_loc_pow,call,loc,pwr,check_callsign);
-//    printf("Will decode as: %s\n",check_call_loc_pow);
+    if (verbose_mode == 1) {
+		printf("Will decode as: %s\n",check_call_loc_pow);
+	}
 
     unsigned int nbytes=11; // The message with tail is packed into 11 bytes.
-    unsigned int nencoded=162;
+//    unsigned int nencoded=162;  // seb - buffer overflow on RasPi 3+
+    unsigned int nencoded=176;  // seb - incressed buffer 2 * nbytes
     unsigned char channelbits[nencoded];
     memset(channelbits,0,sizeof(char)*nencoded);
 

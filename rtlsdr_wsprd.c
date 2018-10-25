@@ -68,6 +68,8 @@ struct decoder_options  dec_options;
 struct decoder_results  dec_results[50];
 static rtlsdr_dev_t *rtl_device = NULL;
 
+// global for vebose output mode
+unsigned char verbose_mode = 0;
 
 /* Thread stuff for separate decoding */
 struct decoder_state {
@@ -218,7 +220,8 @@ static void rtlsdr_callback(unsigned char *samples, uint32_t samples_count, void
                 pthread_cond_signal(&dec.ready_cond);
                 pthread_mutex_unlock(&dec.ready_mutex);
                 rx_state.decode_flag = true;
-                //printf("RX done! [Buffer size: %d]\n", rx_state.iqIndex);
+                if (verbose_mode == 1)
+					printf("RX done! [Buffer size: %d]\n", rx_state.iqIndex);
             }
         }
         decimationIndex = 0;
@@ -394,6 +397,7 @@ void initrx_options() {
 void sigint_callback_handler(int signum) {
     fprintf(stdout, "Caught signal %d\n", signum);
     rx_state.exit_flag = true;
+    printf("Exiting!\n");
 }
 
 
@@ -514,7 +518,7 @@ int main(int argc, char** argv) {
     if (argc <= 1)
         usage();
 
-    while ((opt = getopt(argc, argv, "f:c:l:g:a:o:p:u:d:n:i:H:Q:S")) != -1) {
+    while ((opt = getopt(argc, argv, "f:c:l:g:a:o:p:u:d:n:i:H:Q:S:v")) != -1) {
         switch (opt) {
         case 'f': // Frequency
             rx_options.dialfreq = (uint32_t)atofs(optarg);
@@ -563,6 +567,9 @@ int main(int argc, char** argv) {
         case 'S': // Decoder option, single pass mode (same as original wsprd)
             dec_options.subtraction = 0;
             dec_options.npasses = 1;
+            break;
+        case 'v': // verbose mode
+            verbose_mode = 1;
             break;
         default:
             usage();
@@ -695,7 +702,7 @@ int main(int argc, char** argv) {
     time_t rawtime;
     time ( &rawtime );
     struct tm *gtm = gmtime(&rawtime);
-    printf("\nStarting rtlsdr-wsprd (%04d-%02d-%02d, %02d:%02dz) -- Version 0.2\n",
+    printf("\nStarting rtlsdr-wsprd (%04d-%02d-%02d, %02d:%02dz) -- Version 0.3\n",
            gtm->tm_year + 1900, gtm->tm_mon + 1, gtm->tm_mday, gtm->tm_hour, gtm->tm_min);
     printf("  Callsign     : %s\n", dec_options.rcall);
     printf("  Locator      : %s\n", dec_options.rloc);
@@ -706,6 +713,9 @@ int main(int argc, char** argv) {
         printf("  Auto gain    : enable\n");
     else
         printf("  Gain         : %d dB\n", rx_options.gain/10);
+        
+   if(verbose_mode)
+        printf("\nVerbose mode.\n");
 
 
     /* Time alignment stuff */
@@ -742,7 +752,8 @@ int main(int argc, char** argv) {
         usec  = sec * 1000000 + lTime.tv_usec;
         uwait = 120000000 - usec + 10000;  // Adding 10ms, to be sure to reach this next minute
         usleep(uwait);
-        //printf("SYNC! RX started\n");
+        if (verbose_mode == 1)
+			printf("SYNC! RX started\n");
 
         /* Use the Store the date at the begin of the frame */
         time ( &rawtime );
